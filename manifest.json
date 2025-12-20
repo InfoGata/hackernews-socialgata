@@ -1,0 +1,7 @@
+{
+  "id": "HN4x8k2m9Qpd",
+  "name": "Hacker News Plugin for SocialGata",
+  "version": "1.0.0",
+  "description": "Browse Hacker News feeds, comments, and search stories",
+  "script": "dist/index.js"
+}
