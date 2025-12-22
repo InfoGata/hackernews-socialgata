@@ -231,7 +231,7 @@ const getComments = async (
   };
 };
 
-const getUser = async (request: GetUserRequest): Promise<GetUserReponse> => {
+const getUser = async (request: GetUserRequest): Promise<GetUserResponse> => {
   const path = `/search_by_date?tags=(comment,story),author_${request.apiId}`;
   const url = `${algoliaUrl}${path}`;
   const response = await application.networkRequest(url);
