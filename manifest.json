@@ -3,5 +3,7 @@
   "name": "Hacker News Plugin for SocialGata",
   "version": "1.0.0",
   "description": "Browse Hacker News feeds, comments, and search stories",
-  "script": "dist/index.js"
+  "script": "dist/index.js",
+  "updateUrl": "https://cdn.jsdelivr.net/gh/InfoGata/hackernews-socialgata@latest/manifest.json",
+  "homepage": "https://github.com/InfoGata/hackernews-socialgata"
 }
