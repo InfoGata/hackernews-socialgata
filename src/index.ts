@@ -1,4 +1,3 @@
-const pluginName = "hackernews";
 const hackerNewsUrl = "https://news.ycombinator.com";
 const algoliaUrl = "https://hn.algolia.com/api/v1";
 const firebaseUrl = "https://hacker-news.firebaseio.com";
@@ -116,7 +115,6 @@ const firebaseStoryToPost = (story: FirebaseStory): Post => {
     originalUrl: `${hackerNewsUrl}/item?id=${story.id}`,
     score: story.score,
     numOfComments: story.descendants,
-    pluginId: pluginName,
   };
 };
 
@@ -130,7 +128,6 @@ const algoliaCommentToPost = (comment: AlgoliaCommentItem): Post => {
     originalUrl: `${hackerNewsUrl}/item?id=${comment.id}`,
     parentId: comment.parent_id.toString(),
     comments: comment.children.map(algoliaCommentToPost),
-    pluginId: pluginName,
   };
 };
 
@@ -145,7 +142,6 @@ const algoliaStoryToPost = (story: AlgoliaStoryItem): Post => {
     authorApiId: story.author,
     originalUrl: `${hackerNewsUrl}/item?id=${story.id}`,
     score: story.points,
-    pluginId: pluginName,
   };
 };
 
@@ -160,7 +156,6 @@ const algoliaStoryHitToPost = (story: AlgoliaStoryHit): Post => {
     originalUrl: `${hackerNewsUrl}/item?id=${story.objectID}`,
     score: story.points,
     numOfComments: story.num_comments,
-    pluginId: pluginName,
   };
 };
 
@@ -173,7 +168,6 @@ const algoliaCommentHitToPost = (comment: AlgoliaCommentHit): Post => {
     authorApiId: comment.author,
     parentId: comment.parent_id.toString(),
     originalUrl: `${hackerNewsUrl}/item?id=${comment.objectID}`,
-    pluginId: pluginName,
   };
 };
 
