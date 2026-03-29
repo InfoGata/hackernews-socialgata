@@ -216,8 +216,11 @@ const getComments = async (
   const path = `/items/${request.apiId}`;
   const url = `${algoliaUrl}${path}`;
   const response = await application.networkRequest(url);
-  const json: AlgoliaStoryItem = await response.json();
-  const post = algoliaStoryToPost(json);
+  const json: AlgoliaStoryItem | AlgoliaCommentItem = await response.json();
+  const post =
+    json.type === "comment"
+      ? algoliaCommentToPost(json)
+      : algoliaStoryToPost(json);
   const items = json.children.map(algoliaCommentToPost);
   return {
     post,
