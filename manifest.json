@@ -8,5 +8,15 @@
   "homepage": "https://github.com/InfoGata/hackernews-socialgata",
   "siteMatch": [
     "https://news.ycombinator.com/*"
+  ],
+  "redirects": [
+    {
+      "pattern": "https://news.ycombinator.com/item?id=:postId([^&]+){&*}?",
+      "path": "/post/:postId"
+    },
+    {
+      "pattern": "https://news.ycombinator.com/user?id=:userId([^&]+){&*}?",
+      "path": "/user/:userId"
+    }
   ]
 }
