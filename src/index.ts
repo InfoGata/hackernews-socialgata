@@ -270,6 +270,61 @@ const search = async (request: SearchRequest): Promise<SearchResponse> => {
   };
 };
 
+/**
+ * HN's own `from?site=` page has no API, so this is a full-text search on the
+ * story url, kept to the stories actually hosted there: Algolia matches
+ * "github.com" anywhere in a url, `notgithub.com` and `/r/github.com` included.
+ */
+const DOMAIN_SORTS: SortOption[] = [
+  { id: "new", displayName: "New" },
+  { id: "top", displayName: "Top" },
+];
+
+const isOnDomain = (url: string | undefined, domain: string): boolean => {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+    return host === domain || host.endsWith(`.${domain}`);
+  } catch {
+    return false;
+  }
+};
+
+const getDomain = async (
+  request: GetDomainRequest
+): Promise<GetDomainResponse> => {
+  const domain = request.domain.toLowerCase();
+  const sort = DOMAIN_SORTS.find((s) => s.id === request.sortId) ?? DOMAIN_SORTS[0];
+  const endpoint = sort.id === "new" ? "search_by_date" : "search";
+  const url = new URL(`${algoliaUrl}/${endpoint}`);
+  url.searchParams.append("query", domain);
+  url.searchParams.append("restrictSearchableAttributes", "url");
+  url.searchParams.append("typoTolerance", "false");
+  url.searchParams.append("tags", "story");
+  url.searchParams.append("hitsPerPage", "30");
+  if (request.pageInfo?.page) {
+    url.searchParams.append("page", String(request.pageInfo.page));
+  }
+
+  const response = await application.networkRequest(url.toString());
+  const json: AlgoliaSearch = await response.json();
+  const items = json.hits
+    .filter((hit): hit is AlgoliaStoryHit => "title" in hit)
+    .filter((hit) => isOnDomain(hit.url, domain))
+    .map(algoliaStoryHitToPost);
+
+  return {
+    items,
+    pageInfo: {
+      page: json.page,
+      nextPage: json.page < json.nbPages - 1 ? json.page + 1 : undefined,
+      prevPage: json.page > 0 ? json.page - 1 : undefined,
+    },
+    sortOptions: DOMAIN_SORTS,
+    sortId: sort.id,
+  };
+};
+
 // Theme handling
 const changeTheme = (theme: Theme) => {
   localStorage.setItem("vite-ui-theme", theme);
@@ -286,6 +341,7 @@ application.onGetFeed = getFeed;
 application.onGetComments = getComments;
 application.onGetUser = getUser;
 application.onSearch = search;
+application.onGetDomain = getDomain;
 application.onGetPlatformType = async () => "forum";
 
 application.onChangeTheme = async (theme: Theme) => {
