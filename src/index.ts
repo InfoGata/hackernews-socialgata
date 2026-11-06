@@ -245,10 +245,64 @@ const getUser = async (request: GetUserRequest): Promise<GetUserResponse> => {
   };
 };
 
+/**
+ * The filters hn.algolia.com offers: what to search, sorted by what, over
+ * which period. Each type maps to Algolia `tags`; "All" is stories and
+ * comments, leaving out the polls and poll options HN's own "All" mixes in.
+ */
+const SEARCH_TYPES: (FeedType & { tags: string })[] = [
+  { id: "story", displayName: "Stories", tags: "story" },
+  { id: "comment", displayName: "Comments", tags: "comment" },
+  { id: "all", displayName: "All", tags: "(story,comment)" },
+  { id: "ask_hn", displayName: "Ask HN", tags: "ask_hn" },
+  { id: "show_hn", displayName: "Show HN", tags: "show_hn" },
+];
+
+const SEARCH_TIME_RANGES: (TimeRange & { seconds?: number })[] = [
+  { id: "all", displayName: "All time" },
+  { id: "day", displayName: "Last 24h", seconds: 24 * 60 * 60 },
+  { id: "week", displayName: "Past week", seconds: 7 * 24 * 60 * 60 },
+  { id: "month", displayName: "Past month", seconds: 30 * 24 * 60 * 60 },
+  { id: "year", displayName: "Past year", seconds: 365 * 24 * 60 * 60 },
+];
+
+const timeRangeOptions: TimeRange[] = SEARCH_TIME_RANGES.map(
+  ({ id, displayName }) => ({ id, displayName })
+);
+
+const SEARCH_SORTS: SortOption[] = [
+  {
+    id: "popularity",
+    displayName: "Popularity",
+    timeRanges: timeRangeOptions,
+    defaultTimeRangeId: "all",
+  },
+  {
+    id: "date",
+    displayName: "Date",
+    timeRanges: timeRangeOptions,
+    defaultTimeRangeId: "all",
+  },
+];
+
 const search = async (request: SearchRequest): Promise<SearchResponse> => {
-  const url = new URL(`${algoliaUrl}/search`);
+  // Unknown ids (a feed's "top" carried over in the url) fall back to defaults.
+  const type =
+    SEARCH_TYPES.find((t) => t.id === request.feedTypeId) ?? SEARCH_TYPES[0];
+  const sort =
+    SEARCH_SORTS.find((s) => s.id === request.sortId) ?? SEARCH_SORTS[0];
+  const timeRange =
+    SEARCH_TIME_RANGES.find((r) => r.id === request.timeRangeId) ??
+    SEARCH_TIME_RANGES[0];
+
+  const endpoint = sort.id === "date" ? "search_by_date" : "search";
+  const url = new URL(`${algoliaUrl}/${endpoint}`);
   url.searchParams.append("query", request.query);
-  url.searchParams.append("tags", "story");
+  url.searchParams.append("tags", type.tags);
+  if (timeRange.seconds) {
+    const since = Math.floor(Date.now() / 1000) - timeRange.seconds;
+    url.searchParams.append("numericFilters", `created_at_i>${since}`);
+  }
 
   if (request.pageInfo?.page) {
     url.searchParams.append("page", String(request.pageInfo.page));
@@ -256,9 +310,13 @@ const search = async (request: SearchRequest): Promise<SearchResponse> => {
 
   const response = await application.networkRequest(url.toString());
   const json: AlgoliaSearch = await response.json();
-  const items = json.hits
-    .filter((hit): hit is AlgoliaStoryHit => "title" in hit)
-    .map((hit) => algoliaStoryHitToPost(hit));
+  const items = json.hits.flatMap((hit) => {
+    if ("title" in hit && hit.title) return [algoliaStoryHitToPost(hit)];
+    if ("comment_text" in hit && hit.comment_text) {
+      return [algoliaCommentHitToPost(hit)];
+    }
+    return [];
+  });
 
   return {
     items,
@@ -267,6 +325,11 @@ const search = async (request: SearchRequest): Promise<SearchResponse> => {
       nextPage: json.page < json.nbPages - 1 ? json.page + 1 : undefined,
       prevPage: json.page > 0 ? json.page - 1 : undefined,
     },
+    feedTypes: SEARCH_TYPES.map(({ id, displayName }) => ({ id, displayName })),
+    feedTypeId: type.id,
+    sortOptions: SEARCH_SORTS,
+    sortId: sort.id,
+    timeRangeId: timeRange.id,
   };
 };
 
