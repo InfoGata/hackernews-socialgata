@@ -168,6 +168,8 @@ const algoliaCommentHitToPost = (comment: AlgoliaCommentHit): Post => {
     authorApiId: comment.author,
     parentId: comment.parent_id.toString(),
     originalUrl: `${hackerNewsUrl}/item?id=${comment.objectID}`,
+    postApiId: comment.story_id?.toString(),
+    postTitle: comment.story_title,
   };
 };
 
